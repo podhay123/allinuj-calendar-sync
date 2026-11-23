@@ -11,17 +11,16 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write # commit stanu (data/events.json)
-  pages: write # publikacja .ics na GitHub Pages
-  id-token: write
+  contents: read
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+    permissions:
+      contents: write # commit stanu (data/events.json)
+    outputs:
+      has_feed: ${{ steps.feed.outputs.ok }}
     steps:
       # Zawsze najnowszy main, a nie commit, od którego wystartował przebieg:
       # „Re-run” na GitHubie używa starego SHA, przez co push stanu był odrzucany.
@@ -46,19 +45,19 @@ jobs:
           GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
 
-      # Najpierw publikacja: kalendarz ma się zaktualizować nawet wtedy, gdy zapis stanu do repo zawiedzie.
-      - uses: actions/configure-pages@v5
-        if: ${{ !cancelled() && hashFiles('public/allinuj.ics') != '' }}
+      - name: Czy powstał plik kalendarza?
+        id: feed
+        if: ${{ !cancelled() }}
+        run: |
+          if [ -f public/allinuj.ics ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; else echo "ok=false" >> "$GITHUB_OUTPUT"; fi
+
       - uses: actions/upload-pages-artifact@v4
-        if: ${{ !cancelled() && hashFiles('public/allinuj.ics') != '' }}
+        if: ${{ !cancelled() && steps.feed.outputs.ok == 'true' }}
         with:
           path: public
-      - id: deploy
-        uses: actions/deploy-pages@v4
-        if: ${{ !cancelled() && hashFiles('public/allinuj.ics') != '' }}
 
       - name: Zapisz stan w repo
-        if: ${{ !cancelled() && hashFiles('public/allinuj.ics') != '' }}
+        if: ${{ !cancelled() && steps.feed.outputs.ok == 'true' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -78,3 +77,20 @@ jobs:
         run: |
           echo "::error::Synchronizacja z FB nie powiodła się (szczegóły w kroku 'Pobierz wydarzenia')."
           exit 1
+
+  # Osobny job (oficjalny wzorzec GitHuba): artefakt z kalendarzem jest już wtedy na pewno widoczny.
+  # Publikuje nawet wtedy, gdy job sync skończył się błędem, o ile plik kalendarza powstał.
+  deploy:
+    needs: sync
+    if: ${{ !cancelled() && needs.sync.outputs.has_feed == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - id: deploy
+        uses: actions/deploy-pages@v4
