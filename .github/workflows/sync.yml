@@ -23,7 +23,11 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
+      # Zawsze najnowszy main, a nie commit, od którego wystartował przebieg:
+      # „Re-run” na GitHubie używa starego SHA, przez co push stanu był odrzucany.
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -42,8 +46,19 @@ jobs:
           GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
 
+      # Najpierw publikacja: kalendarz ma się zaktualizować nawet wtedy, gdy zapis stanu do repo zawiedzie.
+      - uses: actions/configure-pages@v5
+        if: ${{ !cancelled() && hashFiles('public/allinuj.ics') != '' }}
+      - uses: actions/upload-pages-artifact@v4
+        if: ${{ !cancelled() && hashFiles('public/allinuj.ics') != '' }}
+        with:
+          path: public
+      - id: deploy
+        uses: actions/deploy-pages@v4
+        if: ${{ !cancelled() && hashFiles('public/allinuj.ics') != '' }}
+
       - name: Zapisz stan w repo
-        if: hashFiles('public/allinuj.ics') != ''
+        if: ${{ !cancelled() && hashFiles('public/allinuj.ics') != '' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -54,20 +69,12 @@ jobs:
             # GitHub wyłącza crony w publicznych repo po 60 dniach bez aktywności (np. w wakacje).
             git commit --allow-empty -m "keepalive"
           fi
-          git push
-
-      - uses: actions/configure-pages@v5
-        if: hashFiles('public/allinuj.ics') != ''
-      - uses: actions/upload-pages-artifact@v4
-        if: hashFiles('public/allinuj.ics') != ''
-        with:
-          path: public
-      - id: deploy
-        uses: actions/deploy-pages@v4
-        if: hashFiles('public/allinuj.ics') != ''
+          # Gdyby w trakcie przebiegu ktoś wypchnął zmiany w kodzie, dołącz je przed pushem.
+          git pull --rebase origin "${{ github.event.repository.default_branch }}"
+          git push origin HEAD:"${{ github.event.repository.default_branch }}"
 
       - name: Zgłoś błąd synchronizacji
-        if: steps.sync.outcome == 'failure'
+        if: ${{ !cancelled() && steps.sync.outcome == 'failure' }}
         run: |
           echo "::error::Synchronizacja z FB nie powiodła się (szczegóły w kroku 'Pobierz wydarzenia')."
           exit 1
