@@ -1,6 +1,6 @@
 # allinuj-calendar-sync
 
-Dwa razy dziennie pobiera nadchodzące wydarzenia ze strony [All in UJ na Facebooku](https://www.facebook.com/allinuj) i publikuje je jako **kalendarz do subskrypcji (.ics)** na GitHub Pages. Wklejasz adres raz do Google Calendar, Apple Calendar albo Outlooka, a nowe wydarzenia pojawiają się same, bez wchodzenia na FB/IG.
+Dwa razy dziennie pobiera nadchodzące wydarzenia ze strony [All in UJ na Facebooku](https://www.facebook.com/allinuj), publikuje je jako **kalendarz do subskrypcji (.ics)** na GitHub Pages i wysyła **maila o każdym nowym wydarzeniu**. Wklejasz adres raz do Google Calendar, Apple Calendar albo Outlooka, a nowe wydarzenia pojawiają się same, bez wchodzenia na FB/IG.
 
 - **Darmowe:** scraping publicznej zakładki Wydarzenia (biblioteka [`facebook-event-scraper`](https://github.com/francescov1/facebook-event-scraper)), bez logowania, bez płatnych API i serwerów.
 - **Stabilne ID:** każde wydarzenie ma stały `UID` oparty na ID z FB, więc zmiana godziny czy miejsca aktualizuje wpis, zamiast go dublować.
@@ -29,6 +29,20 @@ Jeśli potrzebujesz natychmiastowych zmian albo przypomnień w Google, zobacz [O
 3. **Actions → „Sync All in UJ → kalendarz (.ics)” → Run workflow.** Po ~1 min kalendarz jest pod adresem powyżej.
 
 Potem workflow uruchamia się sam o 05:17 i 15:17 UTC. Jeśli przez 30 dni nic się nie zmieni (np. w wakacje), robi pusty commit „keepalive”, bo GitHub wyłącza crony w publicznych repo po 60 dniach bez aktywności.
+
+## Powiadomienia e-mail o nowych wydarzeniach
+
+Gdy na FB pojawi się nowe wydarzenie, przychodzi mail z datą, miejscem, linkiem do zapisów i początkiem opisu. Jeśli w jednym przebiegu pojawi się więcej niż 5 nowych wydarzeń, przychodzi jeden mail zbiorczy. Nieudana wysyłka jest ponawiana przy następnym przebiegu.
+
+Konfiguracja przez Gmail (za darmo):
+1. Konto Google musi mieć włączoną weryfikację dwuetapową. Potem na [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) utwórz **hasło aplikacji** (np. o nazwie „allinuj”) i skopiuj 16 znaków.
+2. W repo: **Settings → Secrets and variables → Actions → New repository secret**:
+   - `SMTP_USER`: Twój adres Gmail (z niego wysyłamy i na niego przychodzą powiadomienia),
+   - `SMTP_PASS`: hasło aplikacji z kroku 1,
+   - opcjonalnie `NOTIFY_TO`: inny adres odbiorcy.
+3. Sprawdź konfigurację: **Actions → Run workflow → zaznacz „Wyślij mail testowy”**. Powinien przyjść mail `[TEST] …`.
+
+Adresy i hasło są w sekretach, więc nie widać ich w kodzie ani w publicznych logach. Inny serwer SMTP ustawisz zmiennymi repo `SMTP_HOST` i `SMTP_PORT` (domyślnie `smtp.gmail.com:465`).
 
 ## Lokalnie
 
@@ -66,6 +80,7 @@ Skrypt nie przywraca wydarzeń, które usuniesz z tego kalendarza ręcznie.
 | `src/store.ts` | stan między uruchomieniami (`data/events.json`), scalanie i retencja |
 | `src/ics.ts` | generowanie pliku `.ics` (RFC 5545) |
 | `src/page.ts` | strona `index.html` z adresem subskrypcji |
+| `src/notify.ts` | powiadomienia e-mail o nowych wydarzeniach (SMTP) |
 | `src/mapEvent.ts`, `src/calendar.ts` | opcjonalna synchronizacja przez Google Calendar API |
 | `src/index.ts` | orkiestracja, log, kod wyjścia |
 | `test/` | testy jednostkowe (`npm test`) |

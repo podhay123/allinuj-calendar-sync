@@ -6,6 +6,11 @@ import type { AllInEvent } from './normalize.js';
 export interface StoredEvent extends AllInEvent {
   /** Kiedy (unix, s) treść wydarzenia ostatnio się zmieniła; trafia do LAST-MODIFIED w .ics. */
   updatedAt: number;
+  /**
+   * `false` = nowe wydarzenie czeka na powiadomienie e-mail (po nieudanej wysyłce zostaje `false`
+   * i próbujemy ponownie przy następnym przebiegu). Brak pola = wydarzenie sprzed powiadomień.
+   */
+  notified?: boolean;
 }
 
 /** Jak długo trzymamy w kalendarzu wydarzenia, które już się odbyły. */
@@ -33,7 +38,13 @@ export function mergeEvents(
   const byId = new Map(stored.map((e) => [e.fbId, e]));
   for (const s of scraped) {
     const prev = byId.get(s.fbId);
-    byId.set(s.fbId, prev && contentKey(prev) === contentKey(s) ? prev : { ...s, updatedAt: Math.floor(nowSec) });
+    if (prev && contentKey(prev) === contentKey(s)) continue;
+    byId.set(s.fbId, {
+      ...s,
+      updatedAt: Math.floor(nowSec),
+      // Nowe wydarzenie czeka na powiadomienie; zmienione zachowuje dotychczasowy stan.
+      notified: prev ? prev.notified : false,
+    });
   }
   const cutoff = nowSec - retentionDays * 86400;
   return [...byId.values()]

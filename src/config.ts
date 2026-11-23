@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import process from 'node:process';
+import type { NotifyConfig } from './notify.js';
 
 export interface Config {
   /** Strona FB, z której bierzemy wydarzenia, np. https://www.facebook.com/allinuj */
@@ -16,7 +17,26 @@ export interface Config {
   calendarId: string | undefined;
   /** Zawartość JSON klucza konta serwisowego (alternatywnie GOOGLE_APPLICATION_CREDENTIALS). */
   serviceAccountJson: string | undefined;
+  /** Powiadomienia e-mail o nowych wydarzeniach; undefined = wyłączone (brak SMTP_USER/SMTP_PASS). */
+  notify: NotifyConfig | undefined;
+  /** Wyślij mail testowy (sprawdzenie konfiguracji SMTP). */
+  notifyTest: boolean;
   dryRun: boolean;
+}
+
+function loadNotifyConfig(env: NodeJS.ProcessEnv): NotifyConfig | undefined {
+  const user = env.SMTP_USER?.trim();
+  // Hasła aplikacji Google wyświetlają się ze spacjami („abcd efgh …”); SMTP ich nie chce.
+  const pass = env.SMTP_PASS?.replace(/\s+/g, '');
+  if (!user || !pass) return undefined;
+  return {
+    host: env.SMTP_HOST?.trim() || 'smtp.gmail.com',
+    port: Number(env.SMTP_PORT?.trim() || 465),
+    user,
+    pass,
+    to: env.NOTIFY_TO?.trim() || user,
+    pageUrl: env.PAGE_URL?.trim() || undefined,
+  };
 }
 
 export function loadConfig(argv: string[] = process.argv.slice(2)): Config {
@@ -33,6 +53,8 @@ export function loadConfig(argv: string[] = process.argv.slice(2)): Config {
     outDir: env.OUT_DIR?.trim() || 'public',
     calendarId: env.GOOGLE_CALENDAR_ID?.trim() || undefined,
     serviceAccountJson: env.GOOGLE_SERVICE_ACCOUNT_JSON?.trim() || undefined,
+    notify: loadNotifyConfig(env),
+    notifyTest: env.NOTIFY_TEST === 'true' || env.NOTIFY_TEST === '1',
     dryRun,
   };
 

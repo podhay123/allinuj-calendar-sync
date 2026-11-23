@@ -5,6 +5,11 @@ on:
     # 05:17 i 15:17 UTC (≈ 6:17 i 16:17 zimą w Krakowie).
     - cron: '17 5,15 * * *'
   workflow_dispatch:
+    inputs:
+      test_email:
+        description: 'Wyślij mail testowy (sprawdzenie powiadomień)'
+        type: boolean
+        default: false
 
 concurrency:
   group: sync
@@ -41,6 +46,14 @@ jobs:
         env:
           FB_PAGE_URL: ${{ vars.FB_PAGE_URL }}
           FB_COOKIES: ${{ secrets.FB_COOKIES }}
+          # Powiadomienia e-mail o nowych wydarzeniach (wyłączone, dopóki nie ma SMTP_USER i SMTP_PASS)
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          NOTIFY_TO: ${{ secrets.NOTIFY_TO }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT }}
+          PAGE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+          NOTIFY_TEST: ${{ inputs.test_email }}
           # Opcjonalnie: dodatkowy zapis przez Google Calendar API
           GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
