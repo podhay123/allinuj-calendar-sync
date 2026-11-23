@@ -1,0 +1,26 @@
+{
+  "name": "allinuj-calendar-sync",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Synchronizuje wydarzenia All in UJ z Facebooka do Google Calendar.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "sync": "tsx src/index.ts",
+    "sync:dry": "tsx src/index.ts --dry-run",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@googleapis/calendar": "20.2.0",
+    "facebook-event-scraper": "0.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.12"
+  }
+}

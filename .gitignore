@@ -1,0 +1,7 @@
+node_modules/
+.env
+# generowane przy każdym uruchomieniu i publikowane przez GitHub Pages
+public/
+# klucze kont serwisowych Google: nigdy nie commituj
+*service-account*.json
+credentials*.json

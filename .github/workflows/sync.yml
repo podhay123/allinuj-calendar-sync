@@ -1,0 +1,73 @@
+name: Sync All in UJ → kalendarz (.ics)
+
+on:
+  schedule:
+    # 05:17 i 15:17 UTC (≈ 6:17 i 16:17 zimą w Krakowie).
+    - cron: '17 5,15 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write # commit stanu (data/events.json)
+  pages: write # publikacja .ics na GitHub Pages
+  id-token: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+      - name: Pobierz wydarzenia i zbuduj .ics
+        id: sync
+        continue-on-error: true # nawet przy częściowym błędzie publikujemy to, co się udało
+        run: npm run sync
+        env:
+          FB_PAGE_URL: ${{ vars.FB_PAGE_URL }}
+          FB_COOKIES: ${{ secrets.FB_COOKIES }}
+          # Opcjonalnie: dodatkowy zapis przez Google Calendar API
+          GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+
+      - name: Zapisz stan w repo
+        if: hashFiles('public/allinuj.ics') != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/events.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Aktualizacja wydarzeń All in UJ"
+          elif [ "$(git log -1 --format=%ct)" -lt "$(date -d '30 days ago' +%s)" ]; then
+            # GitHub wyłącza crony w publicznych repo po 60 dniach bez aktywności (np. w wakacje).
+            git commit --allow-empty -m "keepalive"
+          fi
+          git push
+
+      - uses: actions/configure-pages@v5
+        if: hashFiles('public/allinuj.ics') != ''
+      - uses: actions/upload-pages-artifact@v4
+        if: hashFiles('public/allinuj.ics') != ''
+        with:
+          path: public
+      - id: deploy
+        uses: actions/deploy-pages@v4
+        if: hashFiles('public/allinuj.ics') != ''
+
+      - name: Zgłoś błąd synchronizacji
+        if: steps.sync.outcome == 'failure'
+        run: |
+          echo "::error::Synchronizacja z FB nie powiodła się (szczegóły w kroku 'Pobierz wydarzenia')."
+          exit 1
