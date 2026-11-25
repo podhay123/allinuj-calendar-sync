@@ -2,8 +2,9 @@ name: Sync All in UJ → kalendarz (.ics)
 
 on:
   schedule:
-    # 05:17 i 15:17 UTC (≈ 6:17 i 16:17 zimą w Krakowie).
-    - cron: '17 5,15 * * *'
+    # Co 6 h: 05:17, 11:17, 17:17 i 23:17 UTC (zimą w Krakowie 6:17, 12:17, 18:17 i 0:17).
+    # GitHub czasem pomija zaplanowane przebiegi, więc częstsze uruchomienia to zapas.
+    - cron: '17 5,11,17,23 * * *'
   workflow_dispatch:
     inputs:
       test_email:

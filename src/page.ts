@@ -51,7 +51,7 @@ export function buildPage(events: StoredEvent[], icsFile: string, nowSec: number
 </head>
 <body>
   <h1>${CALENDAR_NAME}: kalendarz wydarzeń</h1>
-  <p class="muted">Wydarzenia pobierane automatycznie z Facebooka All in UJ dwa razy dziennie.</p>
+  <p class="muted">Wydarzenia pobierane automatycznie z Facebooka All in UJ co 6 godzin.</p>
 
   <div class="feed">
     <input id="feed" readonly aria-label="Adres kalendarza">

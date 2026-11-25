@@ -1,6 +1,6 @@
 # allinuj-calendar-sync
 
-Dwa razy dziennie pobiera nadchodzące wydarzenia ze strony [All in UJ na Facebooku](https://www.facebook.com/allinuj), publikuje je jako **kalendarz do subskrypcji (.ics)** na GitHub Pages i wysyła **maila o każdym nowym wydarzeniu**. Wklejasz adres raz do Google Calendar, Apple Calendar albo Outlooka, a nowe wydarzenia pojawiają się same, bez wchodzenia na FB/IG.
+Co 6 godzin pobiera nadchodzące wydarzenia ze strony [All in UJ na Facebooku](https://www.facebook.com/allinuj), publikuje je jako **kalendarz do subskrypcji (.ics)** na GitHub Pages i wysyła **maila o każdym nowym wydarzeniu**. Wklejasz adres raz do Google Calendar, Apple Calendar albo Outlooka, a nowe wydarzenia pojawiają się same, bez wchodzenia na FB/IG.
 
 - **Darmowe:** scraping publicznej zakładki Wydarzenia (biblioteka [`facebook-event-scraper`](https://github.com/francescov1/facebook-event-scraper)), bez logowania, bez płatnych API i serwerów.
 - **Stabilne ID:** każde wydarzenie ma stały `UID` oparty na ID z FB, więc zmiana godziny czy miejsca aktualizuje wpis, zamiast go dublować.
@@ -28,7 +28,7 @@ Jeśli potrzebujesz natychmiastowych zmian albo przypomnień w Google, zobacz [O
 2. **Settings → Pages → Build and deployment → Source: GitHub Actions.**
 3. **Actions → „Sync All in UJ → kalendarz (.ics)” → Run workflow.** Po ~1 min kalendarz jest pod adresem powyżej.
 
-Potem workflow uruchamia się sam o 05:17 i 15:17 UTC. Jeśli przez 30 dni nic się nie zmieni (np. w wakacje), robi pusty commit „keepalive”, bo GitHub wyłącza crony w publicznych repo po 60 dniach bez aktywności.
+Potem workflow uruchamia się sam co 6 godzin: o 05:17, 11:17, 17:17 i 23:17 UTC. GitHub nie gwarantuje punktualności: przebieg bywa opóźniony, a czasem w ogóle pominięty, dlatego jest ich kilka dziennie. Jeśli przez 30 dni nic się nie zmieni (np. w wakacje), robi pusty commit „keepalive”, bo GitHub wyłącza crony w publicznych repo po 60 dniach bez aktywności.
 
 ## Powiadomienia e-mail o nowych wydarzeniach
 
@@ -59,7 +59,7 @@ npm run sync       # aktualizuje data/events.json i generuje public/allinuj.ics 
 - **Błąd także lokalnie:** FB zmienił HTML. Zaktualizuj bibliotekę (`npm install facebook-event-scraper@latest`) i uruchom testy.
 - Gdy pobieranie się nie uda, poprzednia wersja kalendarza zostaje online. Nic nie znika.
 
-> Regulamin Facebooka zabrania automatycznego scrapowania. Skala jest minimalna (jedna publiczna strona, dwa razy dziennie, pauza 2 s między zapytaniami), ale korzystasz na własną odpowiedzialność.
+> Regulamin Facebooka zabrania automatycznego scrapowania. Skala jest minimalna (jedna publiczna strona, 4 razy dziennie, pauza 2 s między zapytaniami), ale korzystasz na własną odpowiedzialność.
 
 ## Opcjonalnie: Google Calendar API
 
